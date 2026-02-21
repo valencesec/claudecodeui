@@ -175,6 +175,7 @@ function ChatInterface({
     currentSessionId,
     provider,
     permissionMode,
+    isYoloAllowed,
     cyclePermissionMode,
     cursorModel,
     claudeModel,

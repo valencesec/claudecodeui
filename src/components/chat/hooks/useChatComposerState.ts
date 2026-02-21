@@ -37,6 +37,7 @@ interface UseChatComposerStateArgs {
   currentSessionId: string | null;
   provider: SessionProvider;
   permissionMode: PermissionMode | string;
+  isYoloAllowed: boolean;
   cyclePermissionMode: () => void;
   cursorModel: string;
   claudeModel: string;
@@ -90,6 +91,7 @@ export function useChatComposerState({
   currentSessionId,
   provider,
   permissionMode,
+  isYoloAllowed,
   cyclePermissionMode,
   cursorModel,
   claudeModel,
@@ -476,7 +478,7 @@ export function useChatComposerState({
     ) => {
       event.preventDefault();
       const currentInput = inputValueRef.current;
-      if (!currentInput.trim() || isLoading || !selectedProject) {
+      if (!currentInput.trim() || isLoading || !selectedProject || (permissionMode === 'bypassPermissions' && !isYoloAllowed)) {
         return;
       }
 
@@ -691,6 +693,7 @@ export function useChatComposerState({
       executeCommand,
       geminiModel,
       isLoading,
+      isYoloAllowed,
       onSessionActive,
       onSessionProcessing,
       pendingViewSessionRef,
