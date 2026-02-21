@@ -612,6 +612,7 @@ async function queryClaudeSDK(command, options = {}, ws) {
             sessionId: capturedSessionId || sessionId || null
           });
         }
+        break; // Result is the final SDK message; exit to send claude-complete
       }
     }
 
