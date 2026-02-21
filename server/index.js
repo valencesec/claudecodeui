@@ -64,9 +64,12 @@ import cliAuthRoutes from './routes/cli-auth.js';
 import userRoutes from './routes/user.js';
 import codexRoutes from './routes/codex.js';
 import geminiRoutes from './routes/gemini.js';
-import { initializeDatabase } from './database/db.js';
+import bcrypt from 'bcrypt';
+import { initializeDatabase, userDb } from './database/db.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
 import { IS_PLATFORM } from './constants/config.js';
+import { getSystemGitConfig } from './utils/gitConfig.js';
+import yoloRoutes from './routes/yolo.js';
 
 // File system watchers for provider project/session folders
 const PROVIDER_WATCH_PATHS = [
@@ -211,6 +214,60 @@ async function setupProjectsWatcher() {
     }
 }
 
+// YOLO file watcher - watches /home/coder/.yolo for bypass permissions gating
+const YOLO_FILE_PATH = '/home/coder/.yolo';
+const YOLO_PARENT_DIR = path.dirname(YOLO_FILE_PATH);
+const YOLO_FILE_NAME = path.basename(YOLO_FILE_PATH);
+
+async function setupYoloWatcher() {
+    try {
+        const chokidar = (await import('chokidar')).default;
+        const { checkYoloStatus } = await import('./routes/yolo.js');
+
+        // Ensure parent directory exists before watching
+        try {
+            await fsPromises.mkdir(YOLO_PARENT_DIR, { recursive: true });
+        } catch {
+            // Directory may already exist or be inaccessible
+        }
+
+        const watcher = chokidar.watch(YOLO_PARENT_DIR, {
+            ignored: (filePath) => {
+                // Only watch the .yolo file itself and the parent dir
+                const base = path.basename(filePath);
+                return filePath !== YOLO_PARENT_DIR && base !== YOLO_FILE_NAME;
+            },
+            persistent: true,
+            ignoreInitial: true,
+            followSymlinks: false,
+            depth: 0,
+            awaitWriteFinish: {
+                stabilityThreshold: 100,
+                pollInterval: 50
+            }
+        });
+
+        const broadcastYoloStatus = () => {
+            const allowed = checkYoloStatus();
+            const message = JSON.stringify({ type: 'yolo_status', allowed });
+            connectedClients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(message);
+                }
+            });
+        };
+
+        watcher
+            .on('add', broadcastYoloStatus)
+            .on('change', broadcastYoloStatus)
+            .on('unlink', broadcastYoloStatus)
+            .on('error', (error) => {
+                console.error('[ERROR] YOLO watcher error:', error);
+            });
+    } catch (error) {
+        console.error('[WARN] Failed to setup YOLO file watcher:', error);
+    }
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -386,6 +443,9 @@ app.use('/api/codex', authenticateToken, codexRoutes);
 
 // Gemini API Routes (protected)
 app.use('/api/gemini', authenticateToken, geminiRoutes);
+
+// YOLO status API Routes (protected)
+app.use('/api/yolo', authenticateToken, yoloRoutes);
 
 // Agent API Routes (uses API key authentication)
 app.use('/api/agent', agentRoutes);
@@ -1980,6 +2040,31 @@ async function startServer() {
         // Initialize authentication database
         await initializeDatabase();
 
+        // INSTANT_START: auto-provision user on startup
+        if (process.env.INSTANT_START === 'true') {
+            try {
+                const hasUsers = userDb.hasUsers();
+                if (!hasUsers) {
+                    const passwordHash = await bcrypt.hash('password', 12);
+                    const user = userDb.createUser('username', passwordHash);
+                    console.log(`${c.ok('[OK]')} INSTANT_START: Created user "username" (id: ${user.id})`);
+
+                    const gitConfig = await getSystemGitConfig();
+                    if (gitConfig.git_name || gitConfig.git_email) {
+                        userDb.updateGitConfig(user.id, gitConfig.git_name, gitConfig.git_email);
+                        console.log(`${c.ok('[OK]')} INSTANT_START: Set git config: ${gitConfig.git_name} <${gitConfig.git_email}>`);
+                    }
+
+                    userDb.completeOnboarding(user.id);
+                    console.log(`${c.ok('[OK]')} INSTANT_START: Onboarding marked complete`);
+                } else {
+                    console.log(`${c.info('[INFO]')} INSTANT_START: User already exists, skipping auto-provisioning`);
+                }
+            } catch (error) {
+                console.error(`${c.warn('[WARN]')} INSTANT_START: Failed to auto-provision user:`, error);
+            }
+        }
+
         // Check if running in production mode (dist folder exists)
         const distIndexPath = path.join(__dirname, '../dist/index.html');
         const isProduction = fs.existsSync(distIndexPath);
@@ -2007,6 +2092,9 @@ async function startServer() {
 
             // Start watching the projects folder for changes
             await setupProjectsWatcher();
+
+            // Start watching /home/coder/.yolo for YOLO mode gating
+            await setupYoloWatcher();
         });
     } catch (error) {
         console.error('[ERROR] Failed to start server:', error);

@@ -88,6 +88,7 @@
       "default": "Default Mode",
       "acceptEdits": "Accept Edits",
       "bypassPermissions": "Bypass Permissions",
+      "notYolo": "Not YOLO",
       "plan": "Plan Mode"
     },
     "descriptions": {

@@ -46,6 +46,7 @@ interface ChatComposerProps {
   onAbortSession: () => void;
   provider: Provider | string;
   permissionMode: PermissionMode | string;
+  isYoloAllowed: boolean;
   onModeSwitch: () => void;
   thinkingMode: string;
   setThinkingMode: Dispatch<SetStateAction<string>>;
@@ -103,6 +104,7 @@ export default function ChatComposer({
   onAbortSession,
   provider,
   permissionMode,
+  isYoloAllowed,
   onModeSwitch,
   thinkingMode,
   setThinkingMode,
@@ -190,6 +192,7 @@ export default function ChatComposer({
 
         {!hasQuestionPanel && <ChatInputControls
           permissionMode={permissionMode}
+          isYoloAllowed={isYoloAllowed}
           onModeSwitch={onModeSwitch}
           provider={provider}
           thinkingMode={thinkingMode}
@@ -301,7 +304,7 @@ export default function ChatComposer({
               onBlur={() => onInputFocusChange?.(false)}
               onInput={onTextareaInput}
               placeholder={placeholder}
-              disabled={isLoading}
+              disabled={isLoading || (permissionMode === 'bypassPermissions' && !isYoloAllowed)}
               className="chat-input-placeholder block w-full pl-12 pr-20 sm:pr-40 py-1.5 sm:py-4 bg-transparent rounded-2xl focus:outline-none text-foreground placeholder-muted-foreground/50 disabled:opacity-50 resize-none min-h-[50px] sm:min-h-[80px] max-h-[40vh] sm:max-h-[300px] overflow-y-auto text-base leading-6 transition-all duration-200"
               style={{ height: '50px' }}
             />
@@ -328,7 +331,7 @@ export default function ChatComposer({
 
             <button
               type="submit"
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || (permissionMode === 'bypassPermissions' && !isYoloAllowed)}
               onMouseDown={(event) => {
                 event.preventDefault();
                 onSubmit(event);
