@@ -9,6 +9,7 @@ import { useChatProviderState } from '../hooks/useChatProviderState';
 import { useChatSessionState } from '../hooks/useChatSessionState';
 import { useChatRealtimeHandlers } from '../hooks/useChatRealtimeHandlers';
 import { useChatComposerState } from '../hooks/useChatComposerState';
+import { useYoloStatus } from '../../../hooks/useYoloStatus';
 import type { Provider } from '../types/types';
 
 type PendingViewSession = {
@@ -71,6 +72,8 @@ function ChatInterface({
   } = useChatProviderState({
     selectedSession,
   });
+
+  const { isYoloAllowed } = useYoloStatus();
 
   const {
     chatMessages,
@@ -329,6 +332,7 @@ function ChatInterface({
           onAbortSession={handleAbortSession}
           provider={provider}
           permissionMode={permissionMode}
+          isYoloAllowed={isYoloAllowed}
           onModeSwitch={cyclePermissionMode}
           thinkingMode={thinkingMode}
           setThinkingMode={setThinkingMode}

@@ -6,6 +6,7 @@ import type { PermissionMode, Provider } from '../../types/types';
 
 interface ChatInputControlsProps {
   permissionMode: PermissionMode | string;
+  isYoloAllowed: boolean;
   onModeSwitch: () => void;
   provider: Provider | string;
   thinkingMode: string;
@@ -22,6 +23,7 @@ interface ChatInputControlsProps {
 
 export default function ChatInputControls({
   permissionMode,
+  isYoloAllowed,
   onModeSwitch,
   provider,
   thinkingMode,
@@ -37,38 +39,44 @@ export default function ChatInputControls({
 }: ChatInputControlsProps) {
   const { t } = useTranslation('chat');
 
+  const isBypassBlocked = permissionMode === 'bypassPermissions' && !isYoloAllowed;
+
   return (
     <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
       <button
         type="button"
         onClick={onModeSwitch}
         className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
-          permissionMode === 'default'
-            ? 'bg-muted/50 text-muted-foreground border-border/60 hover:bg-muted'
-            : permissionMode === 'acceptEdits'
-              ? 'bg-green-50 dark:bg-green-900/15 text-green-700 dark:text-green-300 border-green-300/60 dark:border-green-600/40 hover:bg-green-100 dark:hover:bg-green-900/25'
-              : permissionMode === 'bypassPermissions'
-                ? 'bg-orange-50 dark:bg-orange-900/15 text-orange-700 dark:text-orange-300 border-orange-300/60 dark:border-orange-600/40 hover:bg-orange-100 dark:hover:bg-orange-900/25'
-                : 'bg-primary/5 text-primary border-primary/20 hover:bg-primary/10'
+          isBypassBlocked
+            ? 'bg-muted/50 text-muted-foreground border-border/60 opacity-60 cursor-not-allowed'
+            : permissionMode === 'default'
+              ? 'bg-muted/50 text-muted-foreground border-border/60 hover:bg-muted'
+              : permissionMode === 'acceptEdits'
+                ? 'bg-green-50 dark:bg-green-900/15 text-green-700 dark:text-green-300 border-green-300/60 dark:border-green-600/40 hover:bg-green-100 dark:hover:bg-green-900/25'
+                : permissionMode === 'bypassPermissions'
+                  ? 'bg-orange-50 dark:bg-orange-900/15 text-orange-700 dark:text-orange-300 border-orange-300/60 dark:border-orange-600/40 hover:bg-orange-100 dark:hover:bg-orange-900/25'
+                  : 'bg-primary/5 text-primary border-primary/20 hover:bg-primary/10'
         }`}
         title={t('input.clickToChangeMode')}
       >
         <div className="flex items-center gap-1.5">
           <div
             className={`w-1.5 h-1.5 rounded-full ${
-              permissionMode === 'default'
+              isBypassBlocked
                 ? 'bg-muted-foreground'
-                : permissionMode === 'acceptEdits'
-                  ? 'bg-green-500'
-                  : permissionMode === 'bypassPermissions'
-                    ? 'bg-orange-500'
-                    : 'bg-primary'
+                : permissionMode === 'default'
+                  ? 'bg-muted-foreground'
+                  : permissionMode === 'acceptEdits'
+                    ? 'bg-green-500'
+                    : permissionMode === 'bypassPermissions'
+                      ? 'bg-orange-500'
+                      : 'bg-primary'
             }`}
           />
           <span>
             {permissionMode === 'default' && t('codex.modes.default')}
             {permissionMode === 'acceptEdits' && t('codex.modes.acceptEdits')}
-            {permissionMode === 'bypassPermissions' && t('codex.modes.bypassPermissions')}
+            {permissionMode === 'bypassPermissions' && (isBypassBlocked ? t('codex.modes.notYolo') : t('codex.modes.bypassPermissions'))}
             {permissionMode === 'plan' && t('codex.modes.plan')}
           </span>
         </div>
