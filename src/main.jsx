@@ -1,3 +1,6 @@
+// Seed localStorage defaults before anything else runs
+import './init-defaults.ts'
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
