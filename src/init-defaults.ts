@@ -17,7 +17,6 @@ if (localStorage.getItem(CLAUDE_SETTINGS_KEY) === null) {
       'Bash(timeout:*)',
       'Bash(which:*)',
       'Edit',
-      'ExitPlanMode',
       'Glob',
       'Grep',
       'MultiEdit',
